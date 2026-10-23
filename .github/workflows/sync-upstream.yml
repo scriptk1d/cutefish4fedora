@@ -31,7 +31,7 @@ jobs:
       - name: Update spec pins to upstream main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: scripts/update-pins.sh
+        run: bash scripts/update-pins.sh
 
       - name: Commit and dispatch the build
         env:
