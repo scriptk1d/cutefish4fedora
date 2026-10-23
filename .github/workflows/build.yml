@@ -26,6 +26,8 @@ permissions:
 env:
   ENGINE: docker
   BUILD_SRPMS: ${{ inputs.srpms && '1' || '0' }}
+  # Bump when the build environment itself changes (base image, toolchain).
+  CACHE_VERSION: rpm-v1
 
 jobs:
   # Skia makes the toolkit the long pole; everything else waits for it.
@@ -45,7 +47,17 @@ jobs:
         with:
           path: SOURCES
           key: skia-v1-${{ steps.skia.outputs.rev }}
+      - name: Cache the built RPMs
+        id: rpms
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: ${{ env.CACHE_VERSION }}-cutefish-toolkit-${{ hashFiles('specs/cutefish-toolkit.spec', 'scripts/build-one.sh', 'scripts/build-in-container.sh', 'scripts/fetch-sources.sh') }}
+      - name: Check the cached RPMs
+        if: steps.rpms.outputs.cache-hit == 'true'
+        run: compgen -G 'dist/*.rpm' >/dev/null || { echo 'cache hit without RPMs' >&2; exit 1; }
       - name: Build
+        if: steps.rpms.outputs.cache-hit != 'true'
         run: bash scripts/build-in-container.sh cutefish-toolkit
       - uses: actions/upload-artifact@v4
         with:
@@ -66,7 +78,17 @@ jobs:
           - cutefish-wallpapers
     steps:
       - uses: actions/checkout@v4
+      - name: Cache the built RPMs
+        id: rpms
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: ${{ env.CACHE_VERSION }}-${{ matrix.package }}-${{ hashFiles(format('specs/{0}.spec', matrix.package), format('patches/{0}-*.patch', matrix.package), 'scripts/build-one.sh', 'scripts/build-in-container.sh', 'scripts/fetch-sources.sh') }}
+      - name: Check the cached RPMs
+        if: steps.rpms.outputs.cache-hit == 'true'
+        run: compgen -G 'dist/*.rpm' >/dev/null || { echo 'cache hit without RPMs' >&2; exit 1; }
       - name: Build
+        if: steps.rpms.outputs.cache-hit != 'true'
         run: bash scripts/build-in-container.sh ${{ matrix.package }}
       - uses: actions/upload-artifact@v4
         with:
@@ -81,12 +103,22 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Cache the built RPMs
+        id: rpms
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: ${{ env.CACHE_VERSION }}-cutefish-framework-${{ hashFiles('specs/cutefish-framework.spec', 'specs/cutefish-toolkit.spec', 'patches/cutefish-framework-*.patch', 'scripts/build-one.sh', 'scripts/build-in-container.sh', 'scripts/fetch-sources.sh') }}
+      - name: Check the cached RPMs
+        if: steps.rpms.outputs.cache-hit == 'true'
+        run: compgen -G 'dist/*.rpm' >/dev/null || { echo 'cache hit without RPMs' >&2; exit 1; }
       - name: Dependencies from earlier stages
         uses: actions/download-artifact@v4
         with:
           name: rpm-cutefish-toolkit
           path: deps
       - name: Build
+        if: steps.rpms.outputs.cache-hit != 'true'
         run: bash scripts/build-in-container.sh cutefish-framework
       - uses: actions/upload-artifact@v4
         with:
@@ -112,6 +144,15 @@ jobs:
           - cutefish-compositor
     steps:
       - uses: actions/checkout@v4
+      - name: Cache the built RPMs
+        id: rpms
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: ${{ env.CACHE_VERSION }}-${{ matrix.package }}-${{ hashFiles(format('specs/{0}.spec', matrix.package), 'specs/cutefish-toolkit.spec', 'specs/cutefish-framework.spec', format('patches/{0}-*.patch', matrix.package), 'scripts/build-one.sh', 'scripts/build-in-container.sh', 'scripts/fetch-sources.sh') }}
+      - name: Check the cached RPMs
+        if: steps.rpms.outputs.cache-hit == 'true'
+        run: compgen -G 'dist/*.rpm' >/dev/null || { echo 'cache hit without RPMs' >&2; exit 1; }
       - name: Dependencies from earlier stages
         uses: actions/download-artifact@v4
         with:
@@ -119,6 +160,7 @@ jobs:
           merge-multiple: true
           path: deps
       - name: Build
+        if: steps.rpms.outputs.cache-hit != 'true'
         run: bash scripts/build-in-container.sh ${{ matrix.package }}
       - uses: actions/upload-artifact@v4
         with:
@@ -133,12 +175,22 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+      - name: Cache the built RPMs
+        id: rpms
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: ${{ env.CACHE_VERSION }}-cutefish-dm-${{ hashFiles('specs/cutefish-dm.spec', 'specs/cutefish-toolkit.spec', 'patches/cutefish-dm-*.patch', 'scripts/build-one.sh', 'scripts/build-in-container.sh', 'scripts/fetch-sources.sh') }}
+      - name: Check the cached RPMs
+        if: steps.rpms.outputs.cache-hit == 'true'
+        run: compgen -G 'dist/*.rpm' >/dev/null || { echo 'cache hit without RPMs' >&2; exit 1; }
       - name: Dependencies from earlier stages
         uses: actions/download-artifact@v4
         with:
           name: rpm-cutefish-toolkit
           path: deps
       - name: Build
+        if: steps.rpms.outputs.cache-hit != 'true'
         run: bash scripts/build-in-container.sh cutefish-dm
       - uses: actions/upload-artifact@v4
         with:

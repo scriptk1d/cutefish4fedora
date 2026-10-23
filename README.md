@@ -89,12 +89,20 @@ commit bump produces a newer package without changing `Version`.
 
 ## GitHub Actions
 
-`.github/workflows/build.yml` builds every package in its own job on every
-push and pull request. The jobs follow the dependency order: the toolkit
-first, then the framework and the two data packages in parallel, then the
-applications and `cutefish-dm` in parallel. Each job installs the RPMs built
-by the previous stage from artifacts, so a failed package can be re-run on
-its own from the Actions tab without rebuilding the others.
+`.github/workflows/build.yml` builds each package in its own job. The jobs
+follow the dependency order: the toolkit first, then the framework and the
+two data packages in parallel, then the applications and `cutefish-dm` in
+parallel. Each job installs the RPMs built by the previous stage from
+artifacts, so a failed package can be re-run on its own from the Actions tab
+without rebuilding the others.
+
+Each job caches the RPMs it produced. The key covers the package's own spec,
+the specs it builds against, its patch files and the build scripts, so a
+package is recompiled only when one of those inputs changes: an upstream
+commit rebuilds that package and the packages that build against it, while
+everything else is restored from the cache and still added to the release. A
+no-change run finishes in about a minute; a cache miss (first run, evicted
+cache, or a ref outside the branch cache scope) rebuilds that package alone.
 
 The `release` job collects the per-package artifacts into `cutefish-rpms`.
 Pushing a tag that starts with `v` additionally creates a GitHub release with
