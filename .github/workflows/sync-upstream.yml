@@ -56,10 +56,9 @@ jobs:
           tag="v1.0-$(date -u +%Y%m%d)-$(git rev-parse --short HEAD)"
           if [ "$AUTO_RELEASE" = "false" ] || [ "$AUTO_RELEASE" = "0" ]; then
             echo "AUTO_RELEASE is off, building without a release"
-            gh workflow run build.yml --repo "$GITHUB_REPOSITORY" --ref main \
-              -f srpms=false
+            gh workflow run build.yml --repo "$GITHUB_REPOSITORY" --ref main
           else
             echo "dispatching build, release will be $tag"
             gh workflow run build.yml --repo "$GITHUB_REPOSITORY" --ref main \
-              -f tag_name="$tag" -f srpms=false
+              -f tag_name="$tag"
           fi

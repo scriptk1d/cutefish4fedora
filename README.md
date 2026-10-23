@@ -112,6 +112,11 @@ without publishing releases.
 GitHub disables scheduled workflows after 60 days without repository
 activity; run the workflow once from the Actions tab to re-enable it.
 
+If a build fails, the new pins are already committed, so the next sync has
+nothing to do. Re-run the `RPM` workflow from the Actions tab (or
+`gh workflow run build.yml -f tag_name=v1.0-<date>-<short commit>`) once the
+upstream problem is fixed.
+
 ## Install on Fedora
 
 ```sh
