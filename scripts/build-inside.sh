@@ -43,6 +43,7 @@ order=(
     cutefish-settings
     cutefish-compositor
     cutefish-wallpapers
+    cutefish-dm
 )
 
 resume=${RESUME:-0}

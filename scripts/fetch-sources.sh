@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 # Downloads the source tarballs the specs pin into SOURCES/.
 #
+#   scripts/fetch-sources.sh                 # every spec
+#   scripts/fetch-sources.sh cutefish-dm     # only these specs
+#
 # Every spec carries its commit in a "%global commit <sha>" line, which is the
 # only place the pin lives. Skia is fetched separately: it is pinned in
-# cutefish-toolkit.spec with %global skiarev and is not a GitHub tarball.
+# cutefish-toolkit.spec with %global skiarev and is not a GitHub tarball, so it
+# is only fetched when the toolkit itself is requested.
 set -Eeuo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 sources=${SOURCES:-$root/SOURCES}
 skia_cache=${SKIA_CACHE:-$root/.cache/skia}
+wanted=("$@")
 mkdir -p "$sources"
 
 fetch() {
@@ -25,13 +30,41 @@ fetch() {
 for spec in "$root"/specs/*.spec; do
     repo=$(sed -n 's/^%global repo \([^[:space:]]*\)$/\1/p' "$spec" | head -n1)
     commit=$(sed -n 's/^%global commit \([0-9a-f]\{40\}\)$/\1/p' "$spec" | head -n1)
+    name=$(basename "$spec" .spec)
     if [ -z "$repo" ] || [ -z "$commit" ]; then
         echo "cannot read repo/commit from $spec" >&2
         exit 1
     fi
+
+    if [ ${#wanted[@]} -gt 0 ]; then
+        skip=1
+        for want in "${wanted[@]}"; do
+            if [ "$want" = "$name" ] || [ "$want" = "$repo" ]; then
+                skip=0
+            fi
+        done
+        if [ "$skip" = 1 ]; then
+            continue
+        fi
+    fi
+
     fetch "https://codeload.github.com/cutefishos/$repo/tar.gz/$commit" \
         "$sources/$repo-$commit.tar.gz"
 done
+
+fetch_skia=0
+if [ ${#wanted[@]} -eq 0 ]; then
+    fetch_skia=1
+else
+    for want in "${wanted[@]}"; do
+        if [ "$want" = "cutefish-toolkit" ] || [ "$want" = "cutefish-toolkit-devel" ]; then
+            fetch_skia=1
+        fi
+    done
+fi
+if [ "$fetch_skia" = 0 ]; then
+    exit 0
+fi
 
 # Skia: same checkout scripts/fetch-skia.sh makes in the toolkit repository.
 spec=$root/specs/cutefish-toolkit.spec

@@ -19,10 +19,10 @@ Built packages:
 | cutefish-settings | settings | system settings |
 | cutefish-compositor | cutefish-compositor | Wayland compositor, shell, Xwayland |
 | cutefish-wallpapers | wallpapers | default wallpapers |
+| cutefish-dm | cutefish-dm | display manager: login screen, session start |
 
-`cutefish-dm`, `qt-plugins`, `text-editor`, `video-player`, `calendar`,
-`system-monitor` and `cutefish-computer-use` are optional upstream and are
-not packaged here.
+`qt-plugins`, `text-editor`, `video-player`, `calendar`, `system-monitor` and
+`cutefish-computer-use` are optional upstream and are not packaged here.
 
 ## Build locally
 
@@ -49,6 +49,16 @@ The script:
 rpmbuild tree is left for debugging. `rm -rf .build SOURCES` starts over.
 
 The first component builds Skia with clang and dominates the build time.
+
+To build one package on its own, put the RPMs of its dependencies in `deps/`
+and call the entry point the CI jobs use:
+
+```sh
+scripts/build-in-container.sh cutefish-dm
+```
+
+`scripts/build-one.sh` resolves that spec's `BuildRequires`, installs the RPMs
+from `deps/` first, and copies the result to `dist/`.
 
 ## Update the pinned commits
 
@@ -79,9 +89,16 @@ commit bump produces a newer package without changing `Version`.
 
 ## GitHub Actions
 
-`.github/workflows/build.yml` builds all RPMs on every push and pull
-request, and uploads them as the `cutefish-rpms` artifact. Pushing a tag that
-starts with `v` additionally creates a GitHub release with the RPMs attached:
+`.github/workflows/build.yml` builds every package in its own job on every
+push and pull request. The jobs follow the dependency order: the toolkit
+first, then the framework and the two data packages in parallel, then the
+applications and `cutefish-dm` in parallel. Each job installs the RPMs built
+by the previous stage from artifacts, so a failed package can be re-run on
+its own from the Actions tab without rebuilding the others.
+
+The `release` job collects the per-package artifacts into `cutefish-rpms`.
+Pushing a tag that starts with `v` additionally creates a GitHub release with
+the RPMs attached:
 
 ```sh
 git tag v1.0-20261023
@@ -89,7 +106,8 @@ git push origin v1.0-20261023
 ```
 
 `workflow_dispatch` has an `srpms` switch to include source RPMs and a
-`tag_name` field that turns the run into a release once it succeeds.
+`tag_name` field that turns the run into a release once it succeeds. The Skia
+source is cached by revision, so only a Skia bump pays for the checkout.
 
 ## Automatic upstream sync
 
@@ -134,8 +152,36 @@ AccountsService, polkit, xdg-desktop-portal and Xwayland. `dnf` pulls the
 library dependencies the packages declare; the services above have to be
 installed separately, as on any distribution.
 
-`cutefish-dm` is not part of this repository, so the current display manager
-(SDDM, GDM, LightDM) stays in place and starts the session.
+### Using cutefish-dm
+
+The display manager is installed but not enabled, so the current one (on
+Fedora 44 KDE that is `plasmalogin`, on other spins `sddm` or `gdm`) keeps
+starting the session. Installing the package creates the `cutefish-greeter`
+system user and its home, and ships PAM stacks using Fedora's
+`password-auth`/`system-auth` (the upstream files include the Debian
+`common-*` files, which do not exist here).
+
+To switch to it, disable the current display manager first: both claim the
+`display-manager.service` alias.
+
+```sh
+readlink -f /etc/systemd/system/display-manager.service   # see the current one
+sudo systemctl disable plasmalogin                        # or sddm, gdm
+sudo systemctl enable cutefish-dm
+sudo systemctl start cutefish-dm
+```
+
+The greeter runs on VT1 and the user session on VT2. Autologin, if wanted, is
+configured in `/etc/cutefish-dm.conf`:
+
+```ini
+[Autologin]
+User=cutefish
+Session=cutefish-wayland
+```
+
+Removing the package leaves the greeter user and `/var/lib/cutefish-dm` in
+place, as those may still hold state.
 
 ## Layout
 
@@ -144,9 +190,12 @@ specs/                 one spec per component
 patches/               fixes needed by the Fedora toolchain or libraries
 scripts/fetch-sources.sh   pinned tarballs into SOURCES/
 scripts/update-pins.sh     moves the specs to the tip of upstream main
-scripts/build-inside.sh    the build itself, runs in the Fedora container
+scripts/build-inside.sh    the full sequential build, runs in the container
 scripts/build.sh           container wrapper for local use
-.github/workflows/build.yml  CI: artifacts, release on v* tags
+scripts/build-one.sh       builds one spec, runs in the container
+scripts/build-in-container.sh  one-package wrapper used by CI
+.github/workflows/build.yml  CI: one job per package, release on v* tags
+.github/workflows/sync-upstream.yml  daily pin update and release dispatch
 ```
 
 ## Notes
@@ -155,6 +204,10 @@ scripts/build.sh           container wrapper for local use
   needs `<spa/pod/iter.h>`, which PipeWire up to 1.4 included indirectly but
   1.6 (Fedora 44) does not, and `cutefish-compositor` needs `<cstdint>` in
   `src/clipboard/selection.h` with GCC 16. The patches are in `patches/`.
+- `cutefish-dm` carries one patch that rewrites its PAM stacks for Fedora
+  (`password-auth`/`system-auth` instead of the Debian `common-*` includes).
+  Its `%pre` creates the `cutefish-greeter` system user, and the package owns
+  the greeter's home and `/var/lib/cutefish-dm`.
 - Debug packages are disabled: Skia would add hundreds of megabytes of debug
   info to the toolkit package.
 - `cutefish-toolkit-devel` and `cutefish-framework-devel` carry headers and

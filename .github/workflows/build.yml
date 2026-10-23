@@ -23,34 +23,148 @@ concurrency:
 permissions:
   contents: write
 
+env:
+  ENGINE: docker
+  BUILD_SRPMS: ${{ inputs.srpms && '1' || '0' }}
+
 jobs:
-  build:
+  # Skia makes the toolkit the long pole; everything else waits for it.
+  toolkit:
+    name: cutefish-toolkit
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-
-      - name: Cache sources
+      - name: Read the pinned Skia revision
+        id: skia
+        run: |
+          rev=$(sed -n 's/^%global skiarev \([0-9a-f]\{40\}\)$/\1/p' specs/cutefish-toolkit.spec)
+          echo "rev=$rev" >> "$GITHUB_OUTPUT"
+      - name: Cache the Skia source
         uses: actions/cache@v4
         with:
           path: SOURCES
-          key: sources-${{ hashFiles('specs/*.spec') }}
+          key: skia-v1-${{ steps.skia.outputs.rev }}
+      - name: Build
+        run: bash scripts/build-in-container.sh cutefish-toolkit
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-cutefish-toolkit
+          path: dist/*.rpm
+          if-no-files-found: error
 
-      - name: Build in Fedora
-        run: |
-          docker run --rm \
-            -v "$PWD:/work" -w /work \
-            -e JOBS="$(nproc)" \
-            -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
-            -e BUILD_SRPMS="${{ inputs.srpms && '1' || '0' }}" \
-            fedora:44 bash scripts/build-inside.sh
+  # Data packages depend on nothing and run alongside the toolkit.
+  data:
+    name: ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - cutefish-icons
+          - cutefish-wallpapers
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: bash scripts/build-in-container.sh ${{ matrix.package }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-${{ matrix.package }}
+          path: dist/*.rpm
+          if-no-files-found: error
 
-      - name: Upload RPMs
+  framework:
+    name: cutefish-framework
+    needs: toolkit
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies from earlier stages
+        uses: actions/download-artifact@v4
+        with:
+          name: rpm-cutefish-toolkit
+          path: deps
+      - name: Build
+        run: bash scripts/build-in-container.sh cutefish-framework
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-cutefish-framework
+          path: dist/*.rpm
+          if-no-files-found: error
+
+  # Applications need the toolkit and the framework. They build in parallel.
+  apps:
+    name: ${{ matrix.package }}
+    needs: [toolkit, framework]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - cutefish-core
+          - cutefish-filemanager
+          - cutefish-terminal
+          - xdg-desktop-portal-cutefish
+          - cutefish-settings
+          - cutefish-compositor
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies from earlier stages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rpm-*
+          merge-multiple: true
+          path: deps
+      - name: Build
+        run: bash scripts/build-in-container.sh ${{ matrix.package }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-${{ matrix.package }}
+          path: dist/*.rpm
+          if-no-files-found: error
+
+  dm:
+    name: cutefish-dm
+    needs: toolkit
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies from earlier stages
+        uses: actions/download-artifact@v4
+        with:
+          name: rpm-cutefish-toolkit
+          path: deps
+      - name: Build
+        run: bash scripts/build-in-container.sh cutefish-dm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-cutefish-dm
+          path: dist/*.rpm
+          if-no-files-found: error
+
+  release:
+    name: Assemble and release
+    needs: [apps, data, dm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect the RPMs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rpm-*
+          merge-multiple: true
+          path: dist
+      - name: Upload the combined artifact
         uses: actions/upload-artifact@v4
         with:
           name: cutefish-rpms
           path: dist/*.rpm
           if-no-files-found: error
-
       - name: Release
         if: startsWith(github.ref, 'refs/tags/v') || inputs.tag_name != ''
         uses: softprops/action-gh-release@v2
