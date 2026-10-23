@@ -220,6 +220,14 @@ scripts/build-in-container.sh  one-package wrapper used by CI
   (`password-auth`/`system-auth` instead of the Debian `common-*` includes).
   Its `%pre` creates the `cutefish-greeter` system user, and the package owns
   the greeter's home and `/var/lib/cutefish-dm`.
+- `cutefish-toolkit` carries one patch: `base/paths.cpp` reads `XDG_DATA_HOME`
+  and `XDG_DATA_DIRS` instead of hardcoding the defaults, so the launcher and
+  every other application registry see the directories Flatpak exports its
+  applications to. The same commit is pushed to the
+  `scriptk1d/cutefish-toolkit` fork.
+- `cutefish-core` carries one patch: the session script sources
+  `/etc/profile.d/flatpak.sh`, because a display manager starts the session
+  directly and never runs the profile scripts.
 - Debug packages are disabled: Skia would add hundreds of megabytes of debug
   info to the toolkit package.
 - `cutefish-toolkit-devel` and `cutefish-framework-devel` carry headers and

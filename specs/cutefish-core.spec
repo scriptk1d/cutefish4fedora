@@ -13,6 +13,7 @@ Summary:        Session and system services for the Cutefish desktop
 License:        BSD-3-Clause
 URL:            https://github.com/cutefishos/%{repo}
 Source0:        %{repo}-%{commit}.tar.gz
+Patch0:         cutefish-core-0001-flatpak-session-data-dirs.patch
 
 BuildRequires:  cmake
 BuildRequires:  cmake-rpm-macros
@@ -49,6 +50,7 @@ screen recorder.
 
 %prep
 %setup -q -n %{repo}-%{commit}
+%patch -P 0 -p1
 
 %build
 %cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF

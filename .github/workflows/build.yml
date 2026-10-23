@@ -153,11 +153,15 @@ jobs:
       - name: Check the cached RPMs
         if: steps.rpms.outputs.cache-hit == 'true'
         run: compgen -G 'dist/*.rpm' >/dev/null || { echo 'cache hit without RPMs' >&2; exit 1; }
-      - name: Dependencies from earlier stages
+      - name: Toolkit from the first stage
         uses: actions/download-artifact@v4
         with:
-          pattern: rpm-*
-          merge-multiple: true
+          name: rpm-cutefish-toolkit
+          path: deps
+      - name: Framework from the earlier stage
+        uses: actions/download-artifact@v4
+        with:
+          name: rpm-cutefish-framework
           path: deps
       - name: Build
         if: steps.rpms.outputs.cache-hit != 'true'

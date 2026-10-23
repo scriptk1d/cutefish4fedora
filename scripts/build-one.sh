@@ -47,8 +47,9 @@ cp "$spec" "$topdir/SPECS/"
 
 if compgen -G "$root/deps/*.rpm" >/dev/null; then
     echo "== dependencies from earlier stages"
-    dnf -y --setopt=install_weak_deps=False install "$root"/deps/*.rpm || \
-        rpm -Uvh --replacepkgs --nodeps "$root"/deps/*.rpm
+    # No --nodeps fallback: a failed resolution must stop the job, or the
+    # missing libraries only surface later as link errors.
+    dnf -y --setopt=install_weak_deps=False install "$root"/deps/*.rpm
 fi
 
 echo "== $name: build dependencies"

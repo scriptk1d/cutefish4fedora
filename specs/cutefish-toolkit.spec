@@ -20,6 +20,7 @@ License:        BSD-3-Clause
 URL:            https://github.com/cutefishos/%{repo}
 Source0:        %{repo}-%{commit}.tar.gz
 Source1:        skia-%{skiarev}.tar.gz
+Patch0:         cutefish-toolkit-0001-xdg-data-dirs.patch
 
 BuildRequires:  cmake
 BuildRequires:  cmake-rpm-macros
@@ -67,6 +68,7 @@ UI toolkit.
 
 %prep
 %setup -q -n %{repo}-%{commit}
+%patch -P 0 -p1
 mkdir -p third_party
 tar -xzf %{SOURCE1} -C third_party
 mv third_party/skia-%{skiarev} third_party/skia
