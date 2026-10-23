@@ -61,9 +61,10 @@ Each spec carries its pin in the header:
 %global commitdate 20261020
 ```
 
-Set all four to the new commit, then delete the old tarball from `SOURCES/`
-(or the whole directory) before building. `cutefish-toolkit.spec` also pins
-Skia:
+Run `scripts/update-pins.sh` to do this for all components (or pass repository
+names to limit it), or let the sync workflow do it. If you edit the specs by
+hand, delete the old tarball from `SOURCES/` (or the whole directory) before
+building. `cutefish-toolkit.spec` also pins Skia:
 
 ```spec
 %global skiabranch chrome/m156
@@ -87,7 +88,29 @@ git tag v1.0-20261023
 git push origin v1.0-20261023
 ```
 
-`workflow_dispatch` has an `srpms` switch to include source RPMs.
+`workflow_dispatch` has an `srpms` switch to include source RPMs and a
+`tag_name` field that turns the run into a release once it succeeds.
+
+## Automatic upstream sync
+
+`.github/workflows/sync-upstream.yml` runs every day at 03:17 UTC, and on
+demand from the Actions tab. It:
+
+1. moves every spec to the tip of the matching upstream `main` with
+   `scripts/update-pins.sh`, including the Skia revision read from the
+   toolkit's own `scripts/fetch-skia.sh`;
+2. commits the new pins and pushes to `main` if anything moved;
+3. dispatches `build.yml` for that commit. The build creates the dated tag and
+   the release (`v1.0-<date>-<short commit>`) only after the RPMs are built,
+   so a failing build leaves no release behind.
+
+Pushes made with the workflow's `GITHUB_TOKEN` do not trigger other workflows,
+which is why the sync step dispatches the build explicitly. Set the repository
+variable `AUTO_RELEASE` to `false` to keep building on upstream changes
+without publishing releases.
+
+GitHub disables scheduled workflows after 60 days without repository
+activity; run the workflow once from the Actions tab to re-enable it.
 
 ## Install on Fedora
 

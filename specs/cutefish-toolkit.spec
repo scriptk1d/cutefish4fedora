@@ -6,7 +6,6 @@
 # Pinned by scripts/fetch-skia.sh in the toolkit repository.
 %global skiabranch chrome/m156
 %global skiarev 95ee33d7ec7791ab9c071675710a14fe6408ae4f
-%global skiashort 95ee33d
 
 # Skia is linked statically into libcutefish-toolkit; its debug info would be
 # hundreds of megabytes in the release artifacts.

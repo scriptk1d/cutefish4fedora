@@ -1,0 +1,65 @@
+name: Sync upstream
+
+# Checks the 10 upstream repositories once a day. When main has moved, the
+# pinned commits in specs/ are updated, committed, and the RPM build is
+# dispatched for the new commit. The build creates the dated tag and the
+# release once it has succeeded.
+#
+# A push made with GITHUB_TOKEN does not trigger other workflows, so the build
+# is started explicitly with `gh workflow run` (workflow_dispatch is one of the
+# events GitHub still delivers for a GITHUB_TOKEN action).
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update spec pins to upstream main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: scripts/update-pins.sh
+
+      - name: Commit and dispatch the build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUTO_RELEASE: ${{ vars.AUTO_RELEASE || 'true' }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- specs; then
+            echo "upstream unchanged, nothing to build"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add specs
+          git commit -m "chore: sync upstream main"
+          git push origin HEAD:main
+
+          # Give the push a moment to settle before dispatching against main.
+          sleep 5
+
+          tag="v1.0-$(date -u +%Y%m%d)-$(git rev-parse --short HEAD)"
+          if [ "$AUTO_RELEASE" = "false" ] || [ "$AUTO_RELEASE" = "0" ]; then
+            echo "AUTO_RELEASE is off, building without a release"
+            gh workflow run build.yml --repo "$GITHUB_REPOSITORY" --ref main \
+              -f srpms=false
+          else
+            echo "dispatching build, release will be $tag"
+            gh workflow run build.yml --repo "$GITHUB_REPOSITORY" --ref main \
+              -f tag_name="$tag" -f srpms=false
+          fi
