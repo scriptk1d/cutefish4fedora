@@ -1,0 +1,20 @@
+From: r00t <r00t@localhost>
+Subject: [PATCH] audio: include spa/pod/iter.h for the pod helpers
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+spa_pod_get_bool() and spa_pod_find_prop() live in spa/pod/iter.h.
+PipeWire up to 1.4 pulled that header in through spa/pod/parser.h; 1.6 no
+longer does, so the file failed to compile on Fedora 44 (PipeWire 1.6.9).
+
+--- a/clients/audio/audio_object.cpp
++++ b/clients/audio/audio_object.cpp
+@@ -13,6 +13,7 @@
+ #include <spa/param/props.h>
+ #include <spa/param/route.h>
+ #include <spa/pod/parser.h>
++#include <spa/pod/iter.h>
+ 
+ #include "cutefish/audio/backend.h"
+ 

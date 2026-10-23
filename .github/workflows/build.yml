@@ -1,0 +1,55 @@
+name: RPM
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      srpms:
+        description: Also build source RPMs
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache sources
+        uses: actions/cache@v4
+        with:
+          path: SOURCES
+          key: sources-${{ hashFiles('specs/*.spec') }}
+
+      - name: Build in Fedora
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" -w /work \
+            -e JOBS="$(nproc)" \
+            -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
+            -e BUILD_SRPMS="${{ inputs.srpms && '1' || '0' }}" \
+            fedora:44 bash scripts/build-inside.sh
+
+      - name: Upload RPMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: cutefish-rpms
+          path: dist/*.rpm
+          if-no-files-found: error
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.rpm
+          generate_release_notes: true

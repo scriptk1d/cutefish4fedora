@@ -1,0 +1,20 @@
+From: r00t <r00t@localhost>
+Subject: [PATCH] clipboard: include cstdint for the integer types
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+selection.h uses uint32_t and uint64_t but only got them through the
+standard headers it includes. GCC 16's libstdc++ no longer includes
+<cstdint> there, so the file failed to compile on Fedora 44.
+
+--- a/src/clipboard/selection.h
++++ b/src/clipboard/selection.h
+@@ -7,6 +7,7 @@
+ 
+ #pragma once
+ 
++#include <cstdint>
+ #include <deque>
+ #include <memory>
+ #include <string>
