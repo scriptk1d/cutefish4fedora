@@ -109,8 +109,9 @@ Pushing a tag that starts with `v` additionally creates a GitHub release with
 the RPMs attached:
 
 ```sh
-git tag v1.0-20261023
-git push origin v1.0-20261023
+tag=v1.0-$(date -u +%Y%m%d)-$(git rev-parse --short HEAD)
+git tag "$tag"
+git push origin "$tag"
 ```
 
 `workflow_dispatch` has an `srpms` switch to include source RPMs and a
@@ -176,8 +177,11 @@ To switch to it, disable the current display manager first: both claim the
 readlink -f /etc/systemd/system/display-manager.service   # see the current one
 sudo systemctl disable plasmalogin                        # or sddm, gdm
 sudo systemctl enable cutefish-dm
-sudo systemctl start cutefish-dm
+sudo systemctl reboot
 ```
+
+Rebooting rather than starting it in place keeps the old display manager from
+holding VT1 and the DRM device at the same time.
 
 The greeter runs on VT1 and the user session on VT2. Autologin, if wanted, is
 configured in `/etc/cutefish-dm.conf`:
