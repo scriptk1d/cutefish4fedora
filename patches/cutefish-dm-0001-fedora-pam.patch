@@ -32,10 +32,10 @@ index ddf9cb0..b7b51d2 100644
 +session  include      system-auth
 +session  include      postlogin
 diff --git a/data/cutefish-dm.pam b/data/cutefish-dm.pam
-index b55bae7..ac85c0f 100644
+index b55bae7..5af4cae 100644
 --- a/data/cutefish-dm.pam
 +++ b/data/cutefish-dm.pam
-@@ -1,24 +1,25 @@
+@@ -1,24 +1,27 @@
  #%PAM-1.0
  
 -# Block login if they are globally disabled
@@ -43,8 +43,9 @@ index b55bae7..ac85c0f 100644
 -auth    required        pam_succeed_if.so user != root quiet_success
 -@include common-auth
 --auth   optional        pam_gnome_keyring.so
-+# Fedora: the auth stacks come from password-auth, as they do for gdm and
-+# sddm here. The Debian common-* includes the upstream file uses do not exist.
++# Fedora adaptation of the upstream file: the auth stacks come from
++# password-auth, as they do for gdm and sddm here. The Debian common-*
++# includes the upstream file uses do not exist on Fedora.
  
 -@include common-account
 +auth     [success=done ignore=ignore default=bad] pam_selinux_permit.so
@@ -70,12 +71,13 @@ index b55bae7..ac85c0f 100644
 -# pam_env goes last: what it sets can affect the modules above.
 -session required        pam_env.so
 -session required        pam_env.so envfile=/etc/default/locale user_readenv=1
-+# SELinux needs to be the first session rule, and to intervene last.
-+session  [success=ok ignore=ignore module_unknown=ignore default=bad] pam_selinux.so close
++# SELinux needs to be the first session rule, and to intervene before the
++# session modules that set up the user environment.
++session  required     pam_selinux.so close
 +session  required     pam_loginuid.so
++session  required     pam_selinux.so open
 +session  optional     pam_keyinit.so force revoke
 +session  required     pam_namespace.so
 +session  include      password-auth
-+session  [success=ok ignore=ignore module_unknown=ignore default=bad] pam_selinux.so open
 +-session optional     pam_gnome_keyring.so auto_start
 +session  include      postlogin
