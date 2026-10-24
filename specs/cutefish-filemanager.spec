@@ -1,7 +1,7 @@
 %global repo filemanager
-%global commit a475b515692e2acbf6cdaf2b4c4c16a593095d06
-%global shortcommit a475b51
-%global commitdate 20261022
+%global commit e3dfa655d51b7861a10d84c694e4cc0af943f48e
+%global shortcommit e3dfa65
+%global commitdate 20261023
 
 %global debug_package %{nil}
 

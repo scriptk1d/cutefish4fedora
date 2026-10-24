@@ -1,7 +1,7 @@
 %global repo icons
-%global commit 83a6149105b99800afd28ace06416d4a9ee28399
-%global shortcommit 83a6149
-%global commitdate 20261020
+%global commit 863d156cbef6be7bc2eb7c4453800df416bd73ea
+%global shortcommit 863d156
+%global commitdate 20261023
 
 %global debug_package %{nil}
 

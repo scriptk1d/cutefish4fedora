@@ -1,6 +1,6 @@
 %global repo cutefish-compositor
-%global commit 0c2787486fc94bcba7af1f68cc9b40832a53a559
-%global shortcommit 0c27874
+%global commit f7f1f14a38e9a9deb6f8ce34108598d21c06736a
+%global shortcommit f7f1f14
 %global commitdate 20261022
 
 %global debug_package %{nil}

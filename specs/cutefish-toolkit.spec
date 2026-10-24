@@ -1,7 +1,7 @@
 %global repo cutefish-toolkit
-%global commit 9e161d0428e0381914e4dfef8572a59904f34391
-%global shortcommit 9e161d0
-%global commitdate 20261022
+%global commit d8a60ed3a7546094a2c40f7e24db8c3f304d53bc
+%global shortcommit d8a60ed
+%global commitdate 20261023
 
 # Pinned by scripts/fetch-skia.sh in the toolkit repository.
 %global skiabranch chrome/m156

@@ -1,7 +1,7 @@
 %global repo cutefish-framework
-%global commit c138da60f59f906b91def406168460ce3cedd1c2
-%global shortcommit c138da6
-%global commitdate 20261020
+%global commit d6588f353ea2416e2f6849dab66233bd6be874e4
+%global shortcommit d6588f3
+%global commitdate 20261024
 
 %global debug_package %{nil}
 

@@ -1,7 +1,7 @@
 %global repo settings
-%global commit c0f85ad191468a9dd13fb9afb37a7feebfefddae
-%global shortcommit c0f85ad
-%global commitdate 20261020
+%global commit 724827e0fd2a56dac5d506075b5a891e516b4015
+%global shortcommit 724827e
+%global commitdate 20261021
 
 %global debug_package %{nil}
 
